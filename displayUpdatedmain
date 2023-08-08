@@ -1,0 +1,190 @@
+#include "SSD1306Wire.h"  //Biblioteca do Display I2C OLED
+#include <DHT.h>
+#define I2C_SLC 22            //Pino de entrada digital: CLOCK DISPLAY
+#define I2C_SDA 21             //Pino de entrada digital: DADOS DISPLAY
+#define BOTAO_TELA_PIN 33     //Pino de saída digital: BOTÃO
+#define BOTAO_ENTER_PIN 27     //Pino de saída digital: BOTÃO
+
+/* Definicoes do sensor DHT22 */
+#define DHTPIN 26     //GPIO que está ligado o pino de dados do sensor
+ 
+#define DHTTYPE DHT11
+
+int aux = 1, y = 0, enter = 0, status = 0;
+float valorPortaBat = 0;
+float valorTensao;
+float medidaTemp = 0;
+float medidaUmid = 0;
+// INSTANCIANDO OBJETOS DO DISPLAY
+SSD1306Wire  display(0x3c, I2C_SDA, I2C_SLC);
+/* Variaveis, constantes e objetos globais */
+DHT dht(DHTPIN, DHTTYPE);
+
+/* Prototypes */
+float faz_leitura_temperatura(void);
+float faz_leitura_umidade(void);
+
+/* Função: faz a leitura de temperatura (sensor DHT22)
+ * Parametros: nenhum
+ * Retorno: temperatura (graus Celsius)
+ */
+float faz_leitura_temperatura(void)
+{
+    float t = dht.readTemperature();
+    float result;
+     
+    if (! (isnan(t)) )
+        result = t;
+    else
+        result = -99.99;
+ 
+    return result;
+}
+ 
+/* Função: faz a leitura de umidade relativa do ar (sensor DHT22)
+ * Parametros: nenhum
+ * Retorno: umidade (0 - 100%)
+ */
+float faz_leitura_umidade(void)
+{
+    float h = dht.readHumidity();    
+    float result;
+     
+    if (! (isnan(h)) )
+        result = h;
+    else
+        result = -99.99;
+ 
+    return result;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);           // Inicia Serial Monitor 
+  pinMode(BOTAO_TELA_PIN, INPUT); // Define o pino como entrada
+  dht.begin();  
+  display.init();                 // Inicia o Display     
+  display.flipScreenVertically(); 
+  telainicial();
+  delay(5000);
+}
+
+void loop() {
+
+  valorPortaBat = analogRead(35); //GPIO A SER LIDA 
+  valorTensao = (((valorPortaBat/1240)*2)+0.30);
+  Serial.print(";$;");
+  Serial.print(valorTensao);
+  Serial.print(" V;");
+  //TEMP
+  medidaTemp = faz_leitura_temperatura();
+  medidaUmid = faz_leitura_umidade();
+  Serial.print(medidaTemp);
+  Serial.print("ºC");
+  Serial.print(";");
+  Serial.print(medidaUmid);
+  Serial.print("%");
+  Serial.print(";");
+
+  if(aux==1){
+     telaMedidas(); 
+  }
+  if(aux==2){
+     telaPot();
+  }
+  if(aux==3){
+     telaBateria(); 
+  }
+  if(aux==4){
+     telaParametros1();
+  }  
+  /*if(digitalRead(BOTAO_TELA_PIN) == LOW){
+    Serial.println("Botão Exibir Resultado pressionado");
+    delay(50);
+    while(!digitalRead(BOTAO_TELA_PIN)){
+      y++;
+    } 
+    y=0;
+    delay(50);
+    //SELECIONA A TELA
+    aux++;
+    if(aux==5){
+        aux=0;
+    }
+  }*/
+}
+/**
+  * @brief  Funções Telas do Display 
+  */
+void telainicial() {        //Configurações da tela inicial do display
+  //Apaga o display
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  //Seleciona a fonte
+  display.setFont(ArialMT_Plain_16);
+  //display.drawString(63, 25, "Configurando...");
+  display.drawString(63, 45, "ValeEURobotic");
+  display.drawString(28, 0, "Equipe");
+  display.drawString(105, 21, "Sense");
+  display.setFont(Dialog_plain_20);
+  display.drawString(42, 18, "Thermo");
+  display.display();
+}
+  
+void telaParametros1() {      //Configurações da tela Parâmetro do display
+  //Apaga o display
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  //Seleciona a fonte
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(65, 0, "*** Parâmetros ***");
+  display.drawString(65, 20, "Leitura Sensor");
+  display.drawString(45, 40, "Intervalo:");
+  display.drawString(90, 40, "60");
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(110, 45, "seg");
+  display.display();
+}
+
+void telaBateria() {      //Configurações da tela Parâmetro do display
+  //Apaga o display
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  //Seleciona a fonte
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(65, 0, "**** Medições ****");
+  display.drawString(65, 20, "Tensão Bateria:");
+  display.drawString(65, 40, String(valorTensao));
+  display.drawString(90, 40, "V");
+  display.display();
+}
+
+void telaPot() {      //Configurações da tela Parâmetro do display
+  //Apaga o display
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  //Seleciona a fonte
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(65, 0, "**** Medições ****");
+  display.drawString(65, 20, "Sinal Analógico:");
+  display.drawString(65, 40, "90");
+  display.drawString(90, 40, "V");
+  display.display();
+}
+
+void telaMedidas() {      //Configurações da tela Parâmetro do display
+  //Apaga o display
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  //Seleciona a fonte
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(65, 0, "**** Medições ****");
+  display.drawString(45, 20, "Temp.:");
+  display.drawString(90, 20, String(medidaTemp,2));
+  display.drawString(36, 40, "Umidade:");
+  display.drawString(90, 40, String(medidaUmid,2));
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(122, 20, "°C");
+  display.drawString(122, 40, "%");
+  display.display();
+}
